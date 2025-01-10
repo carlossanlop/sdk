@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using Microsoft.DotNet.ApiSymbolExtensions.Logging;
 
 namespace Microsoft.DotNet.ApiSymbolExtensions
 {
@@ -24,6 +25,13 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
         /// <param name="paths">List of paths to load binaries from. Can be full paths to binaries or directories.</param>
         /// <returns>The list of resolved <see cref="IAssemblySymbol"/>.</returns>
         IReadOnlyList<IAssemblySymbol?> LoadAssemblies(params string[] paths);
+
+        /// <summary>
+        /// Loads a set of assemblies from the filesystem and gets their corresponding <see cref="IAssemblySymbol"/> instances as a dictionary.
+        /// </summary>
+        /// <param name="paths">List of paths to load binaries from. Can be full paths to binaries or directories.</param>
+        /// <returns>The dictionary of resolved <see cref="IAssemblySymbol"/> instances,excluding those which resolved as <see langword="null"/>.</returns>
+        IDictionary<string, IAssemblySymbol> LoadAssembliesAsDictionary(params string[] paths);
 
         /// <summary>
         /// Loads assemblies from an archive based on the given relative paths.

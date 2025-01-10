@@ -47,8 +47,7 @@ namespace Microsoft.DotNet.GenAPI
                 writer.WriteAssembly(kvp.Value);
             }
 
-            loader.LogAllDiagnostics();
-            loader.LogAllWarnings();
+            //loader.Log();
         }
 
         // Creates a TextWriter capable of writing into Console or a cs file.

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using Microsoft.DotNet.ApiSymbolExtensions.Logging;
 
 namespace Microsoft.DotNet.ApiSymbolExtensions
 {
@@ -22,7 +23,7 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
         /// Loads a list of assemblies and gets its corresponding <see cref="IAssemblySymbol"/> from the specified paths.
         /// </summary>
         /// <param name="paths">List of paths to load binaries from. Can be full paths to binaries or directories.</param>
-        /// <returns>The list of resolved <see cref="IAssemblySymbol"/>.</returns>
+        /// <returns>The list of resolved <see cref="IAssemblySymbol"/> instances, which can be resolved to <see langword="null"/>.</returns>
         IReadOnlyList<IAssemblySymbol?> LoadAssemblies(params string[] paths);
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.CodeAnalysis;
 using Microsoft.DotNet.ApiSymbolExtensions.Logging;
 
 namespace Microsoft.DotNet.ApiSymbolExtensions
@@ -14,6 +15,6 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
     {
         /// <inheritdoc />
         public IAssemblySymbolLoader Create(bool shouldResolveReferences) =>
-            new AssemblySymbolLoader(log, shouldResolveReferences, includeInternalSymbols);
+            new AssemblySymbolLoader(log, resolveAssemblyReferences: shouldResolveReferences, includeInternalSymbols: includeInternalSymbols);
     }
 }

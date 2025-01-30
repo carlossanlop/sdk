@@ -57,17 +57,28 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
         /// <param name="log">The logger instance to use for message logging.</param>
         /// <param name="assembliesPaths">A collection of paths where the assembly DLLs should be searched.</param>
         /// <param name="assemblyReferencesPaths">An optional collection of paths where the assembly references should be searched.</param>
+        /// <param name="diagnosticOptions">An optional dictionary of specific diagnostic options to use when compiling the loaded assemblies.</param>
         /// <param name="respectInternals">Whether to include internal symbols or not.</param>
         /// <returns>A tuple containing an assembly symbol loader and its corresponding dictionary of assembly symbols.</returns>
-        public static (AssemblySymbolLoader, Dictionary<string, IAssemblySymbol>) CreateFromFiles(ILog log, string[] assembliesPaths, string[]? assemblyReferencesPaths, bool respectInternals = false)
+        public static (AssemblySymbolLoader, Dictionary<string, IAssemblySymbol>) CreateFromFiles(ILog log, string[] assembliesPaths, string[]? assemblyReferencesPaths, Dictionary<string, ReportDiagnostic>? diagnosticOptions = null, bool respectInternals = false)
         {
+            AssemblySymbolLoader loader;
             if (assembliesPaths.Length == 0)
             {
-                return (new AssemblySymbolLoader(log, resolveAssemblyReferences: true, includeInternalSymbols: respectInternals), new Dictionary<string, IAssemblySymbol>());
+                loader = new AssemblySymbolLoader(log,
+                    diagnosticOptions,
+                    resolveAssemblyReferences: true,
+                    includeInternalSymbols: respectInternals);
+
+                return (loader, new Dictionary<string, IAssemblySymbol>());
             }
 
             bool atLeastOneReferencePath = assemblyReferencesPaths?.Count() > 0;
-            AssemblySymbolLoader loader = new(log, resolveAssemblyReferences: atLeastOneReferencePath, respectInternals);
+            loader = new AssemblySymbolLoader(log,
+                diagnosticOptions,
+                resolveAssemblyReferences: atLeastOneReferencePath,
+                includeInternalSymbols: respectInternals);
+
             if (atLeastOneReferencePath)
             {
                 loader.AddReferenceSearchPaths(assemblyReferencesPaths!);
@@ -97,14 +108,19 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
         /// Creates a new instance of the <see cref="AssemblySymbolLoader"/> class.
         /// </summary>
         /// <param name="log">A logger instance for logging message.</param>
+        /// <param name="diagnosticOptions">An optional dictionary of specific diagnostic options to use when compiling the loaded assemblies.</param>
         /// <param name="resolveAssemblyReferences">True to attempt to load references for loaded assemblies from the locations specified with <see cref="AddReferenceSearchPaths(string[])"/>. Default is false.</param>
         /// <param name="includeInternalSymbols">True to include all internal metadata for assemblies loaded. Default is false which only includes public and some internal metadata. <seealso cref="MetadataImportOptions"/></param>
-        public AssemblySymbolLoader(ILog log, bool resolveAssemblyReferences = false, bool includeInternalSymbols = false)
+        public AssemblySymbolLoader(ILog log, Dictionary<string, ReportDiagnostic>? diagnosticOptions = null, bool resolveAssemblyReferences = false, bool includeInternalSymbols = false)
         {
             _log = log;
             _loadedAssemblies = [];
-            CSharpCompilationOptions compilationOptions = new(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable,
-                metadataImportOptions: includeInternalSymbols ? MetadataImportOptions.Internal : MetadataImportOptions.Public);
+            CSharpCompilationOptions compilationOptions = new(
+                OutputKind.DynamicallyLinkedLibrary,
+                nullableContextOptions: NullableContextOptions.Enable,
+                metadataImportOptions: includeInternalSymbols ? MetadataImportOptions.Internal : MetadataImportOptions.Public,
+                specificDiagnosticOptions: diagnosticOptions);
+
             _cSharpCompilation = CSharpCompilation.Create($"AssemblyLoader_{DateTime.Now:MM_dd_yy_HH_mm_ss_FFF}", options: compilationOptions);
             _resolveReferences = resolveAssemblyReferences;
         }
@@ -156,6 +172,29 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
             }
 
             LogCompilationDiagnostics();
+
+            return assemblySymbols;
+        }
+
+        /// <inheritdoc />
+        private IDictionary<string, IAssemblySymbol> LoadAssembliesAsDictionary(params string[] paths)
+        {
+            // First resolve all assemblies that are passed in and create metadata references out of them.
+            // Reference assemblies of the passed in assemblies that themselves are passed in, will be skipped to be resolved,
+            // as they are resolved as part of the loop below.
+            ImmutableHashSet<string> fileNames = paths.Select(path => Path.GetFileName(path)).ToImmutableHashSet();
+            List<MetadataReference> assembliesToReturn = LoadFromPaths(paths, fileNames);
+
+            // Create IAssemblySymbols out of the MetadataReferences.
+            // Doing this after resolving references to make sure that references are available.
+            Dictionary<string, IAssemblySymbol> assemblySymbols = [];
+            foreach (MetadataReference metadataReference in assembliesToReturn)
+            {
+                if (_cSharpCompilation.GetAssemblyOrModuleSymbol(metadataReference) is IAssemblySymbol assemblySymbol)
+                {
+                    assemblySymbols.Add(assemblySymbol.Name, assemblySymbol);
+                }
+            }
 
             return assemblySymbols;
         }

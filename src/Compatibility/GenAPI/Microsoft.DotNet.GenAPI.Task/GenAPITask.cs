@@ -72,7 +72,7 @@ namespace Microsoft.DotNet.GenAPI.Task
                 log,
                 assembliesPaths: Assemblies,
                 assemblyReferencesPaths: AssemblyReferences,
-                RespectInternals);
+                respectInternals: RespectInternals);
 
             GenAPIApp.Run(log,
                           loader,

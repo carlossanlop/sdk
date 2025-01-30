@@ -110,7 +110,7 @@ namespace Microsoft.DotNet.GenAPI.Tool
                     log,
                     assembliesPaths: assemblies,
                     assemblyReferencesPaths: parseResult.GetValue(assemblyReferencesOption),
-                    respectInternals);
+                    respectInternals: respectInternals);
 
                 GenAPIApp.Run(log,
                     loader,
